@@ -1,92 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CPS Click Test</title>
-    <link rel="stylesheet" href="index.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Measure your clicks per second, see your pace, and try to beat your personal best.">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>CPS Tester</title>
+  <link rel="stylesheet" href="./index.css">
+  <script type="module" src="./index.js"></script>
 </head>
 <body>
-    <div class="container">
+  <main>
+    <header class="header">
+      <h1>CPS Tester</h1>
+      <a href="https://github.com/egalgorix/Cps-tester">Source on GitHub</a>
+    </header>
 
-        <div class="container-areaC">
-
-        <div class="container-area">
-           <div class="container-area__1">
-               <span id="timer">0</span>
-            </div>
-            <div class="container-area__2">
-                Timer
-            </div>
+    <section aria-label="Click speed test">
+      <fieldset class="duration">
+        <legend>Test duration</legend>
+        <div class="duration-options">
+          <label><input type="radio" name="duration" value="1"><span>1s</span></label>
+          <label><input type="radio" name="duration" value="5" checked><span>5s</span></label>
+          <label><input type="radio" name="duration" value="10"><span>10s</span></label>
+          <label><input type="radio" name="duration" value="15"><span>15s</span></label>
+          <label><input type="radio" name="duration" value="30"><span>30s</span></label>
+          <label><input type="radio" name="duration" value="60"><span>60s</span></label>
         </div>
+      </fieldset>
 
-        <div class="container-area">
-            <div class="container-area__1">
-                <span id="clicks">0</span>
-             </div>
-             <div class="container-area__2">
-                 Click/s
-             </div>
-         </div>
+      <dl class="scoreboard">
+        <div><dt>Time left</dt><dd><span id="time">5.0</span><small> s</small></dd></div>
+        <div><dt>Clicks</dt><dd id="clicks">0</dd></div>
+        <div><dt>Clicks/sec</dt><dd id="cps">0.00</dd></div>
+        <div><dt>Best <span id="best-duration">(5s)</span></dt><dd id="best">—</dd></div>
+      </dl>
 
-         <div class="container-area">
-            <div class="container-area__1">
-                <span id="score">0</span>
-             </div>
-             <div class="container-area__2">
-                 Score
-             </div>
-         </div>
+      <div class="target-wrap">
+        <button type="button" id="target" aria-describedby="input-help">
+          <span id="target-label">Start clicking</span>
+          <span id="target-note">Your first click starts the timer</span>
+        </button>
+        <progress id="progress" max="1" value="0" aria-label="Round progress"></progress>
+      </div>
 
-         </div>
+      <div class="test-footer">
+        <p id="input-help">Click, tap, or focus the target and press Space or Enter.</p>
+        <button type="button" id="reset" disabled>Reset</button>
+      </div>
+    </section>
 
-        <div class="container-click-area" onclick="clickAnimation(event)">
-       <button class="container-click-area__button">
-        Click me and start the test
-       </button>
-        </div>
+    <p class="sr-only" id="announcement" role="status" aria-atomic="true"></p>
 
-        <div class="container-areaC" style="display: none;">
+    <section class="details" aria-label="Test results">
+      <div>
+        <h2>Click pace</h2>
+        <p class="detail-note" id="pace-note">Finish a round to see your pace.</p>
+        <ol id="pace" class="pace" hidden aria-label="Clicks by interval"></ol>
+      </div>
+      <div>
+        <h2>Recent rounds <span id="history-duration">5s</span></h2>
+        <p class="detail-note" id="history-empty">No rounds at this duration yet.</p>
+        <ol class="history" id="history" hidden></ol>
+      </div>
+    </section>
 
-            <div class="container-area">
-               <div class="container-area__1">
-                   <span id="timer1">0</span>
-                </div>
-                <div class="container-area__2">
-                    Timer
-                </div>
-            </div>
-    
-            <div class="container-area">
-                <div class="container-area__1">
-                    <span id="clicks1">0</span>
-                 </div>
-                 <div class="container-area__2">
-                     Click/s
-                 </div>
-             </div>
-    
-             <div class="container-area">
-                <div class="container-area__1">
-                    <span id="score1">0</span>
-                 </div>
-                 <div class="container-area__2">
-                     Score
-                 </div>
-             </div>
-
-             <div class="container-area">
-                <div class="container-area__1">
-                    <span id="animal1">Animal</span>
-                 </div>
-                 <div class="container-area__2">
-                     Animals
-                 </div>
-             </div>
-
-             </div>
-
-    </div>
+    <noscript><p>JavaScript is required to run the click speed test.</p></noscript>
+  </main>
 </body>
-<script src="index.js"></script>
 </html>

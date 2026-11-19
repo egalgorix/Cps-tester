@@ -1,107 +1,193 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const clickButton = document.querySelector('.container-click-area__button');
-    const clickArea = document.querySelector('.container-click-area');
-    const timerDisplay = document.getElementById('timer');
-    const clicksDisplay = document.getElementById('clicks');
-    const scoreDisplay = document.getElementById('score');
-    const timerResult = document.getElementById('timer1');
-    const clicksResult = document.getElementById('clicks1');
-    const scoreResult = document.getElementById('score1');
-    const animalResult = document.getElementById('animal1');
-    const resultContainer = document.querySelector('.container-areaC:last-child');
+import { Round, clicksPerSecond, loadRecords, paceGroups, saveResult } from "./engine.js";
 
-    let clicks = 0;
-    let startTime;
-    let interval;
+const storageKey = "cps-tester:rounds:v1";
+const target = document.querySelector("#target");
+const targetLabel = document.querySelector("#target-label");
+const targetNote = document.querySelector("#target-note");
+const reset = document.querySelector("#reset");
+const durationInputs = [...document.querySelectorAll("[name=duration]")];
+const progress = document.querySelector("#progress");
+const time = document.querySelector("#time");
+const clicks = document.querySelector("#clicks");
+const cps = document.querySelector("#cps");
+const best = document.querySelector("#best");
+const bestDuration = document.querySelector("#best-duration");
+const announcement = document.querySelector("#announcement");
+const pace = document.querySelector("#pace");
+const paceNote = document.querySelector("#pace-note");
+const history = document.querySelector("#history");
+const historyDuration = document.querySelector("#history-duration");
+const historyEmpty = document.querySelector("#history-empty");
 
-    clickButton.addEventListener('click', () => {
-        clickButton.style.display = 'none';
-        startTest();
-    });
+let records = loadRecords(readSavedResults());
+let duration = Number(durationInputs.find(input => input.checked).value);
+let round;
+let frame;
+let state = "ready";
 
-    clickArea.addEventListener('click', () => {
-        clicks++;
-    });
+function readSavedResults() {
+  try {
+    return localStorage.getItem(storageKey);
+  } catch {
+    return null;
+  }
+}
 
-    function startTest() {
-        clicks = 0;
-        startTime = Date.now();
-        updateDisplays();
-        interval = setInterval(updateDisplays, 1);
-        setTimeout(endTest, 5000);
-    }
+function storeResults() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(records));
+  } catch {
+    return;
+  }
+}
 
-    function updateDisplays() {
-        const elapsedTime = (Date.now() - startTime) / 1000;
-        const cps = (clicks / elapsedTime).toFixed(2);
-        timerDisplay.textContent = elapsedTime.toFixed(3);
-        clicksDisplay.textContent = clicks;
-        scoreDisplay.textContent = cps;
-    }
+function updateText(element, value) {
+  if (element.textContent !== value) element.textContent = value;
+}
 
-    function endTest() {
-        clearInterval(interval);
-        const elapsedTime = (Date.now() - startTime) / 1000;
-        const cps = (clicks / elapsedTime).toFixed(1);
-        timerResult.textContent = elapsedTime.toFixed(2);
-        clicksResult.textContent = clicks;
-        scoreResult.textContent = cps;
-        animalResult.textContent = getAnimal(cps);
-        resultContainer.style.display = 'flex';
-        setTimeout(() => {
-            clickButton.style.display = 'block';
-        }, 1000);
-    }
+function renderMetrics({ remaining, clicks: count, cps: speed }) {
+  updateText(time, (Math.ceil(remaining / 100) / 10).toFixed(1));
+  updateText(clicks, String(count));
+  updateText(cps, speed === null ? "—" : speed.toFixed(2));
+  progress.value = 1 - remaining / (duration * 1000);
+}
 
-    function getAnimal(cps) {
-        if (cps < 1) {
-            return 'Turtle';
-        } else if (cps < 2) {
-            return 'Rabbit';
-        } else if (cps < 3) {
-            return 'Cheetah';
-        } else if (cps < 4) {
-            return 'Fox';
-        } else if (cps < 5) {
-            return 'Wolf';
-        } else if (cps < 6) {
-            return 'Lion';
-        } else if (cps < 7) {
-            return 'Tiger';
-        } else if (cps < 8) {
-            return 'Panther';
-        } else if (cps < 9) {
-            return 'Leopard';
-        } else if (cps < 10) {
-            return 'Eagle';
-        } else if (cps >= 10) {
-            return 'Falcon';
-        }
-    }
-    
+function renderPace(result) {
+  pace.replaceChildren();
+  pace.hidden = !result;
+  if (!result) {
+    paceNote.textContent = "Finish a round to see where you picked up speed.";
+    return;
+  }
 
-    window.clickAnimation = function(event) {
-        const circle = document.createElement('div');
-        circle.classList.add('circle');
-        clickArea.appendChild(circle);
-    
-        const x = event.clientX - clickArea.getBoundingClientRect().left;
-        const y = event.clientY - clickArea.getBoundingClientRect().top;
-    
-        circle.style.left = `${x-50}px`;
-        circle.style.top = `${y-50}px`;
-    
-        circle.animate([
-          { transform: 'scale(0)', opacity: 1 },
-          { transform: 'scale(0.5)', opacity: 0 }
-        ], {
-          duration: 500,
-          easing: 'ease-out'
-        });
-    
-        setTimeout(() => {
-          circle.remove();
-        }, 500);
-    };
+  const groups = paceGroups(result);
+  const maximum = Math.max(1, ...groups.map(group => group.clicks));
+  const seconds = groups[0].to - groups[0].from;
+  paceNote.textContent = seconds === 1 ? "Clicks per second in the latest round" : "Clicks per 5 seconds in the latest round";
+  for (const { from, to, clicks: count } of groups) {
+    const item = document.createElement("li");
+    item.className = "pace-column";
+    const bar = document.createElement("span");
+    bar.className = "pace-bar";
+    bar.style.setProperty("--bar-height", (count / maximum * 100) + "%");
+    bar.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.className = "sr-only";
+    label.textContent = from + " to " + to + " seconds: " + count + " clicks";
+    item.title = label.textContent;
+    item.append(bar, label);
+    pace.append(item);
+  }
+}
 
+function renderResults() {
+  const { best: bestCount, recent } = records[duration];
+  best.textContent = bestCount ? (bestCount / duration).toFixed(2) + " CPS" : "—";
+  bestDuration.textContent = "(" + duration + "s)";
+  historyDuration.textContent = duration + "s";
+  historyEmpty.hidden = recent.length > 0;
+  history.hidden = recent.length === 0;
+  history.replaceChildren();
+  for (const result of recent) {
+    const item = document.createElement("li");
+    const total = document.createElement("span");
+    total.textContent = result.clicks + (result.clicks === 1 ? " click" : " clicks");
+    const score = document.createElement("strong");
+    score.textContent = clicksPerSecond(result).toFixed(2) + " CPS";
+    item.append(total, score);
+    history.append(item);
+  }
+  renderPace(recent[0]);
+}
+
+function setState(next) {
+  state = next;
+  target.dataset.state = next;
+  target.setAttribute("aria-disabled", String(next === "finished"));
+  for (const input of durationInputs) input.disabled = next === "running";
+  reset.disabled = next === "ready";
+  reset.textContent = next === "finished" ? "Try again" : "Reset";
+}
+
+function resetRound(message = "") {
+  cancelAnimationFrame(frame);
+  round = undefined;
+  setState("ready");
+  targetLabel.textContent = "Start clicking";
+  targetNote.textContent = message || "Your first click starts the timer";
+  announcement.textContent = message;
+  renderMetrics({ remaining: duration * 1000, clicks: 0, cps: 0 });
+}
+
+function finishRound() {
+  cancelAnimationFrame(frame);
+  const result = round.result();
+  const speed = clicksPerSecond(result);
+  const isBest = result.clicks > records[duration].best;
+  saveResult(records, result);
+  storeResults();
+  setState("finished");
+  targetLabel.textContent = "Round complete";
+  targetNote.textContent = isBest ? "New personal best" : speed.toFixed(2) + " clicks per second";
+  announcement.textContent = targetLabel.textContent + ". " + result.clicks + " clicks, " +
+    speed.toFixed(2) + " clicks per second." + (isBest ? " New personal best." : "");
+  renderMetrics({ remaining: 0, clicks: result.clicks, cps: speed });
+  renderResults();
+}
+
+function tick(now) {
+  if (state !== "running") return;
+  if (now >= round.deadline) {
+    finishRound();
+    return;
+  }
+  renderMetrics(round.metrics(now));
+  frame = requestAnimationFrame(tick);
+}
+
+target.addEventListener("click", () => {
+  if (state === "finished") return;
+  const now = performance.now();
+  if (state === "ready") {
+    round = new Round(duration, now);
+    setState("running");
+    targetLabel.textContent = "Keep clicking";
+    targetNote.textContent = duration + "-second round";
+    announcement.textContent = "Round started.";
+    frame = requestAnimationFrame(tick);
+  }
+  if (round.record(now)) renderMetrics(round.metrics(now));
+  else if (now >= round.deadline) finishRound();
 });
+
+target.addEventListener("keydown", event => {
+  if (event.repeat && (event.key === " " || event.key === "Enter")) event.preventDefault();
+});
+
+reset.addEventListener("click", () => {
+  resetRound();
+  target.focus({ preventScroll: true });
+});
+
+for (const input of durationInputs) {
+  input.addEventListener("change", () => {
+    duration = Number(input.value);
+    resetRound();
+    renderResults();
+  });
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && state === "running") {
+    resetRound("Round canceled because the tab was hidden.");
+  }
+});
+
+window.addEventListener("storage", event => {
+  if (event.key !== storageKey && event.key !== null) return;
+  records = loadRecords(readSavedResults());
+  renderResults();
+});
+
+resetRound();
+renderResults();
